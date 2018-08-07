@@ -49,8 +49,11 @@ for stable_pose_mesh in stable_pose_meshes:
         t = tf.translation
         P = ci.proj_matrix.dot(np.c_[R, t])
 
-        import pdb
-        pdb.set_trace()
-
         stable_pose_mesh.show()
 
+        break
+
+    break
+
+        # import pdb
+        # pdb.set_trace()
