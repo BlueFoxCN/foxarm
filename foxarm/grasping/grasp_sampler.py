@@ -44,9 +44,9 @@ except:
 
 import scipy.stats as stats
 
-from grasp import ParallelJawPtGrasp3D
-from contacts import Contact3D
-from quality import PointGraspMetrics3D
+from .grasp import ParallelJawPtGrasp3D
+from .contacts import Contact3D
+from .quality import PointGraspMetrics3D
 
 class GraspSampler:
     """ Base class for various methods to sample a number of grasps on an object.

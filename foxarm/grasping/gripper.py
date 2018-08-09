@@ -30,7 +30,7 @@ import sys
 
 import IPython
 
-import foxarm.common.obj_file as obj_file
+import trimesh
 
 from autolab_core import RigidTransform
 
@@ -74,7 +74,7 @@ class RobotGripper(object):
         ----------
         grasp : :obj:`ParallelJawPtGrasp3D`
             grasp parameterizing the pose of the gripper
-        stable_pose : :obj:`StablePose`
+        stable_pose : :obj:`RigidTransform`
             specifies the pose of the table
         clearance : float
             min distance from the table
@@ -88,10 +88,10 @@ class RobotGripper(object):
         T_obj_gripper = grasp.gripper_pose(self)
 
         T_obj_mesh = T_obj_gripper * self.T_mesh_gripper.inverse()
-        mesh_tf = self.mesh.transform(T_obj_mesh.inverse())
+        mesh_tf = self.mesh.apply_transform(T_obj_mesh.inverse())
         
         # extract table
-        n = stable_pose.r[2,:]
+        n = stable_pose.rotation[2,:]
         x0 = stable_pose.x0
 
         # check all vertices for intersection with table
@@ -119,7 +119,7 @@ class RobotGripper(object):
             loaded gripper objects
         """
         mesh_filename = os.path.join(gripper_dir, gripper_name, GRIPPER_MESH_FILENAME)
-        mesh = obj_file.ObjFile(mesh_filename).read()
+        mesh = trimesh.load(mesh_filename)
         
         f = open(os.path.join(os.path.join(gripper_dir, gripper_name, GRIPPER_PARAMS_FILENAME)), 'r')
         params = json.load(f)

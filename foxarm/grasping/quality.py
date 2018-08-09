@@ -24,8 +24,8 @@ from foxarm.grasping.grasp_quality_config import GraspQualityConfig
 import meshpy.obj_file as obj_file
 import meshpy.sdf_file as sdf_file
 '''
-import foxarm.common.obj_file as obj_file
-import foxarm.common.sdf_file as sdf_file
+# import foxarm.common.obj_file as obj_file
+# import foxarm.common.sdf_file as sdf_file
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

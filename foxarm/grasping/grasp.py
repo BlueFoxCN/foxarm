@@ -9,11 +9,9 @@ import time
 
 from autolab_core import Point, RigidTransform
 from foxarm.common.sdf import Sdf3D
-from foxarm.common.stable_pose import StablePose
-from graspable_object import GraspableObject3D
+from foxarm.grasping.graspable_object import GraspableObject3D
 
 '''
-from meshpy import StablePose
 try:
     from gqcnn import Grasp2D
 except:
@@ -371,7 +369,7 @@ class ParallelJawPtGrasp3D(PointGrasp):
         
         Parameters
         ----------
-        stable_pose : :obj:`StablePose` or :obj:`RigidTransform`
+        stable_pose : :obj:`RigidTransform`
             the stable pose to compute the angles for
 
         Returns
@@ -599,7 +597,7 @@ class ParallelJawPtGrasp3D(PointGrasp):
                 return abs(np.dot(normal, grasp_axis_rotated))
             return matrix_product
     
-        stable_pose_normal = stable_pose.r[2,:]
+        stable_pose_normal = stable_pose.rotation[2,:]
         
         theta = _argmin(_get_matrix_product_x_axis(np.array([1,0,0]), np.dot(inv(self.unrotated_full_axis), stable_pose_normal)), 0, 2*np.pi, 1000)
         return theta
@@ -673,7 +671,7 @@ class ParallelJawPtGrasp3D(PointGrasp):
 
         Parameters
         ----------
-        stable_pose : :obj:`StablePose` or :obj:`RigidTransform`
+        stable_pose : :obj:`RigidTransform`
             the pose specifying the orientation of the table
 
         Returns
@@ -681,10 +679,7 @@ class ParallelJawPtGrasp3D(PointGrasp):
         :obj:`ParallelJawPtGrasp3D`
             aligned grasp
         """
-        if isinstance(stable_pose, StablePose):
-            table_normal = stable_pose.r[2,:]
-        else:
-            table_normal = stable_pose.rotation[2,:]
+        table_normal = stable_pose.rotation[2,:]
         theta = self._angle_aligned_with_table(table_normal)
         new_grasp = deepcopy(self)
         new_grasp.approach_angle = theta
