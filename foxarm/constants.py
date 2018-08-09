@@ -42,3 +42,11 @@ DEF_MAX_ITER = 100
 READ_ONLY_ACCESS = 'READ_ONLY'
 READ_WRITE_ACCESS = 'READ_WRITE'
 WRITE_ACCESS = 'WRITE'
+
+WORK_DIR = '/home/coconut/programme/dex-net_py3/foxarm/'
+TEST_DB_NAME = WORK_DIR + 'hdf5_data/example.hdf5'
+TEST_DS_NAME = 'mini_dexnet'
+OBJ_FILENAME = WORK_DIR + 'mini_dexnet/bar_clamp.obj'
+SDF_FILENAME = WORK_DIR + 'mini_dexnet/bar_clamp.sdf'
+TEST_CONFIG_NAME = WORK_DIR + 'foxarm/common/config.yaml'
+GRIPPER_NAME = 'yumi_metal_spline'

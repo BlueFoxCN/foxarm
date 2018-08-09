@@ -36,7 +36,7 @@ except:
 import IPython
 
 # turn off output logging
-cvx.solvers.options['show_progress'] = False
+# cvx.solvers.options['show_progress'] = False
 
 class PointGraspMetrics3D:
     """ Class to wrap functions for quasistatic point grasp quality metrics.

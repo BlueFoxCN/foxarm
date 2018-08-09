@@ -9,8 +9,8 @@ import time
 
 from autolab_core import Point, RigidTransform
 from foxarm.common.sdf import Sdf3D
+from foxarm.common.stable_pose import StablePose
 from graspable_object import GraspableObject3D
-
 
 '''
 from meshpy import StablePose
@@ -22,7 +22,7 @@ except:
 
 
 from foxarm import abstractstatic
-from foxarm.grasping import Contact3D
+from foxarm.grasping.contacts import Contact3D
 
 class Grasp(object):
     """ Abstract grasp class.
