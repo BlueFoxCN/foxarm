@@ -1,4 +1,5 @@
 import copy
+import os
 import grasp
 from grasp import ParallelJawPtGrasp3D
 from gripper import RobotGripper
@@ -27,7 +28,7 @@ mesh  = of.read()
 sdf   = sf.read()
 
 obj = GraspableObject3D(sdf, mesh)
-gripper = RobotGripper.load(GRIPPER_NAME)
+gripper = RobotGripper.load(GRIPPER_NAME, os.path.join(WORK_DIR, "foxarm/common"))
 ags = AntipodalGraspSampler(gripper, CONFIG)
 
 database = Hdf5Database(TEST_DB_NAME, access_level=READ_WRITE_ACCESS)

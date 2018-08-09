@@ -4,3 +4,4 @@ mini_dexnet
 *.swp
 *.hdf5
 *.obj
+render

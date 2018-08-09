@@ -507,8 +507,8 @@ class AntipodalGraspSampler(GraspSampler):
                         plt.close() # lol
 
                     # check friction cone
-                    # if PointGraspMetrics3D.force_closure(c1, c2, self.friction_coef):
-                    grasps.append(grasp)
+                    if PointGraspMetrics3D.force_closure(c1, c2, self.friction_coef):
+                        grasps.append(grasp)
 
         # randomly sample max num grasps from total list
         random.shuffle(grasps)

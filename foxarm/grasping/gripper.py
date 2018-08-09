@@ -103,7 +103,7 @@ class RobotGripper(object):
         return collision
 
     @staticmethod
-    def load(gripper_name, gripper_dir='/home/coconut/programme/dex-net_py3/foxarm/foxarm/common'):
+    def load(gripper_name, gripper_dir):
         """ Load the gripper specified by gripper_name.
 
         Parameters

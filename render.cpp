@@ -1,4 +1,6 @@
 #include <iostream>
+#include <stdio.h>
+#include <climits>
 
 #include "GL/osmesa.h"
 #include <GL/gl.h>
@@ -11,7 +13,7 @@ float near = 0.05f;
 float far = 1e2f;
 float scale = (0x0001) << 0;
 
-void render_mesh(float* projection,
+int main(float* projection,
                  unsigned int im_height,
                  unsigned int im_width,
                  double* verts_buffer,
@@ -91,11 +93,19 @@ void render_mesh(float* projection,
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
+    /*
+    unsigned char colorBytes[3];
+    colorBytes[0] = (unsigned char)mat_props_buffer[0];
+    colorBytes[1] = (unsigned char)mat_props_buffer[1];
+    colorBytes[2] = (unsigned char)mat_props_buffer[2];
+    */
+
     // render mesh
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, im_width, im_height);
     for (unsigned int i = 0; i < num_tris; ++i) {
-        glColor3ubv(colorBytes);
+        // glColor3ubv(colorBytes);
         glBegin(GL_POLYGON);
 
         unsigned int a = tris_buffer[3*i + 0];
@@ -115,12 +125,13 @@ void render_mesh(float* projection,
 
     // pull depth buffer and flip y axis
     GLint out_width, out_height, bytes_per_depth;
+    GLboolean succeeded;
     unsigned short* p_depth_buffer;
     succeeded = OSMesaGetDepthBuffer(ctx, &out_width, &out_height, &bytes_per_depth, (void**)&p_depth_buffer);
     if (depth_result == NULL)
         depth_result = new float[out_width * out_height];
-    for(i = 0; i < out_width; i++){
-        for(j = 0; j < out_height; j++){
+    for(int i = 0; i < out_width; i++){
+        for(int j = 0; j < out_height; j++){
             int di = i + j * out_width; // index in depth buffer
             int ri = i + (out_height-1-j)*out_width; // index in rendered image
             if (p_depth_buffer[di] == USHRT_MAX) {
@@ -137,6 +148,7 @@ void render_mesh(float* projection,
 
     // destroy the context
     OSMesaDestroyContext( ctx );
+    return 1;
 }
 
 
