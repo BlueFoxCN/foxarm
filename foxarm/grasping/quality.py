@@ -14,7 +14,7 @@ import sys
 import time
 
 '''
-	from dexnet.grasping import PointGrasp, GraspableObject3D, GraspQualityConfig
+    from dexnet.grasping import PointGrasp, GraspableObject3D, GraspQualityConfig
 '''
 from foxarm.grasping.grasp import PointGrasp
 from foxarm.grasping.graspable_object import GraspableObject3D
@@ -42,8 +42,8 @@ class PointGraspMetrics3D:
     """ Class to wrap functions for quasistatic point grasp quality metrics.
     """
 
-	@staticmethod
-	def grasp_quality(grasp, obj, params, vis=False):
+    @staticmethod
+    def grasp_quality(grasp, obj, params, vis=False):
         """
         Computes the quality of a two-finger point grasps on a given object using a quasi-static model.
         Parameters
@@ -55,8 +55,8 @@ class PointGraspMetrics3D:
         params : :obj:`GraspQualityConfig`
             parameters of grasp quality function
         """
-		start = time.time()
-		if not isinstance(grasp, PointGrasp):
+        start = time.time()
+        if not isinstance(grasp, PointGrasp):
             raise ValueError('Must provide a point grasp object')
         if not isinstance(obj, GraspableObject3D):
             raise ValueError('Must provide a 3D graspable object')
@@ -210,6 +210,271 @@ class PointGraspMetrics3D:
         return G
 
     @staticmethod
+    def force_closure(c1, c2, friction_coef, use_abs_value=True):
+        """" Checks force closure using the antipodality trick.
+        Parameters
+        ----------
+        c1 : :obj:`Contact3D`
+            first contact point
+        c2 : :obj:`Contact3D`
+            second contact point
+        friction_coef : float
+            coefficient of friction at the contact point
+        use_abs_value : bool
+            whether or not to use directoinality of the surface normal (useful when mesh is not oriented)
+        Returns
+        -------
+        int : 1 if in force closure, 0 otherwise
+        """
+        if c1.point is None or c2.point is None or c1.normal is None or c2.normal is None:
+            return 0
+        p1, p2 = c1.point, c2.point
+        n1, n2 = -c1.normal, -c2.normal # inward facing normals
+
+        if (p1 == p2).all(): # same point
+            return 0
+
+        for normal, contact, other_contact in [(n1, p1, p2), (n2, p2, p1)]:
+            diff = other_contact - contact
+            normal_proj = normal.dot(diff) / np.linalg.norm(normal)
+            if use_abs_value:
+                normal_proj = abs(normal.dot(diff)) / np.linalg.norm(normal)
+
+            if normal_proj < 0:
+                return 0 # wrong side
+            alpha = np.arccos(normal_proj / np.linalg.norm(diff))
+            if alpha > np.arctan(friction_coef):
+                return 0 # outside of friction cone
+        return 1
+
+    @staticmethod
+    def force_closure_qp(forces, torques, normals, soft_fingers=False,
+                         wrench_norm_thresh=1e-3, wrench_regularizer=1e-10,
+                         params=None):
+        """ Checks force closure by solving a quadratic program (whether or not zero is in the convex hull)
+        Parameters
+        ----------
+        forces : 3xN :obj:`numpy.ndarray`
+            set of forces on object in object basis
+        torques : 3xN :obj:`numpy.ndarray`
+            set of torques on object in object basis
+        normals : 3xN :obj:`numpy.ndarray`
+            surface normals at the contact points
+        soft_fingers : bool
+            whether or not to use the soft finger contact model
+        wrench_norm_thresh : float
+            threshold to use to determine equivalence of target wrenches
+        wrench_regularizer : float
+            small float to make quadratic program positive semidefinite
+        params : :obj:`GraspQualityConfig`
+            set of parameters for grasp matrix and contact model
+        Returns
+        -------
+        int : 1 if in force closure, 0 otherwise
+        """
+        if params is not None:
+            if 'wrench_norm_thresh' in params.keys():
+                wrench_norm_thresh = params.wrench_norm_thresh
+            if 'wrench_regularizer' in params.keys():
+                wrench_regularizer = params.wrench_regularizer
+
+        G = PointGraspMetrics3D.grasp_matrix(forces, torques, normals, soft_fingers, params=params)
+        min_norm, _ = PointGraspMetrics3D.min_norm_vector_in_facet(G, wrench_regularizer=wrench_regularizer)
+        return 1 * (min_norm < wrench_norm_thresh) # if greater than wrench_norm_thresh, 0 is outside of hull
+
+    @staticmethod
+    def partial_closure(forces, torques, normals, soft_fingers=False,
+                        wrench_norm_thresh=1e-3, wrench_regularizer=1e-10,
+                        params=None):
+        """ Evalutes partial closure: whether or not the forces and torques can resist a specific wrench.
+        Estimates resistance by sollving a quadratic program (whether or not the target wrench is in the convex hull).
+        Parameters
+        ----------
+        forces : 3xN :obj:`numpy.ndarray`
+            set of forces on object in object basis
+        torques : 3xN :obj:`numpy.ndarray`
+            set of torques on object in object basis
+        normals : 3xN :obj:`numpy.ndarray`
+            surface normals at the contact points
+        soft_fingers : bool
+            whether or not to use the soft finger contact model
+        wrench_norm_thresh : float
+            threshold to use to determine equivalence of target wrenches
+        wrench_regularizer : float
+            small float to make quadratic program positive semidefinite
+        params : :obj:`GraspQualityConfig`
+            set of parameters for grasp matrix and contact model
+        Returns
+        -------
+        int : 1 if in partial closure, 0 otherwise
+        """
+        force_limit = None
+        if params is None:
+            return 0
+        force_limit = params.force_limits
+        target_wrench = params.target_wrench
+        if 'wrench_norm_thresh' in params.keys():
+            wrench_norm_thresh = params.wrench_norm_thresh
+        if 'wrench_regularizer' in params.keys():
+            wrench_regularizer = params.wrench_regularizer
+
+        # reorganize the grasp matrix for easier constraint enforcement in optimization
+        num_fingers = normals.shape[1]
+        num_wrenches_per_finger = forces.shape[1] / num_fingers
+        G = np.zeros([6,0])
+        for i in range(num_fingers):
+            start_i = num_wrenches_per_finger * i
+            end_i = num_wrenches_per_finger * (i + 1)
+            G_i = PointGraspMetrics3D.grasp_matrix(forces[:,start_i:end_i], torques[:,start_i:end_i], normals[:,i:i+1],
+                                                   soft_fingers, params=params)
+            G = np.c_[G, G_i]
+
+        wrench_resisted, _ = PointGraspMetrics3D.wrench_in_positive_span(G, target_wrench, force_limit, num_fingers,
+                                                                wrench_norm_thresh=wrench_norm_thresh,
+                                                                wrench_regularizer=wrench_regularizer)
+        return 1 * wrench_resisted
+
+    @staticmethod
+    def wrench_resistance(forces, torques, normals, soft_fingers=False, 
+                          wrench_norm_thresh=1e-3, wrench_regularizer=1e-10,
+                          finger_force_eps=1e-9, params=None):
+        """ Evalutes wrench resistance: the inverse norm of the contact forces required to resist a target wrench
+        Estimates resistance by sollving a quadratic program (min normal contact forces to produce a wrench).
+        Parameters
+        ----------
+        forces : 3xN :obj:`numpy.ndarray`
+            set of forces on object in object basis
+        torques : 3xN :obj:`numpy.ndarray`
+            set of torques on object in object basis
+        normals : 3xN :obj:`numpy.ndarray`
+            surface normals at the contact points
+        soft_fingers : bool
+            whether or not to use the soft finger contact model
+        wrench_norm_thresh : float
+            threshold to use to determine equivalence of target wrenches
+        wrench_regularizer : float
+            small float to make quadratic program positive semidefinite
+        finger_force_eps : float
+            small float to prevent numeric issues in wrench resistance metric
+        params : :obj:`GraspQualityConfig`
+            set of parameters for grasp matrix and contact model
+        Returns
+        -------
+        float : value of wrench resistance metric
+        """
+        force_limit = None
+        if params is None:
+            return 0
+        force_limit = params.force_limits
+        target_wrench = params.target_wrench
+        if 'wrench_norm_thresh' in params.keys():
+            wrench_norm_thresh = params.wrench_norm_thresh
+        if 'wrench_regularizer' in params.keys():
+            wrench_regularizer = params.wrench_regularizer
+        if 'finger_force_eps' in params.keys():
+            finger_force_eps = params.finger_force_eps
+
+        # reorganize the grasp matrix for easier constraint enforcement in optimization
+        num_fingers = normals.shape[1]
+        num_wrenches_per_finger = forces.shape[1] / num_fingers
+        G = np.zeros([6,0])
+        for i in range(num_fingers):
+            start_i = num_wrenches_per_finger * i
+            end_i = num_wrenches_per_finger * (i + 1)
+            G_i = PointGraspMetrics3D.grasp_matrix(forces[:,start_i:end_i], torques[:,start_i:end_i], normals[:,i:i+1],
+                                                   soft_fingers, params=params)
+            G = np.c_[G, G_i]
+
+        # compute metric from finger force norm
+        Q = 0
+        wrench_resisted, finger_force_norm = PointGraspMetrics3D.wrench_in_positive_span(G, target_wrench, force_limit, num_fingers,
+                                                                                         wrench_norm_thresh=wrench_norm_thresh,
+                                                                                         wrench_regularizer=wrench_regularizer)
+        if wrench_resisted:
+            Q = 1.0 / (finger_force_norm + finger_force_eps) - 1.0 / (2 * force_limit)
+        return Q
+
+    @staticmethod
+    def min_singular(forces, torques, normals, soft_fingers=False, params=None):
+        """ Min singular value of grasp matrix - measure of wrench that grasp is "weakest" at resisting.
+        Parameters
+        ----------
+        forces : 3xN :obj:`numpy.ndarray`
+            set of forces on object in object basis
+        torques : 3xN :obj:`numpy.ndarray`
+            set of torques on object in object basis
+        normals : 3xN :obj:`numpy.ndarray`
+            surface normals at the contact points
+        soft_fingers : bool
+            whether or not to use the soft finger contact model
+        params : :obj:`GraspQualityConfig`
+            set of parameters for grasp matrix and contact model
+        Returns
+        -------
+        float : value of smallest singular value
+        """
+        G = PointGraspMetrics3D.grasp_matrix(forces, torques, normals, soft_fingers)
+        _, S, _ = np.linalg.svd(G)
+        min_sig = S[5]
+        return min_sig
+
+    @staticmethod
+    def wrench_volume(forces, torques, normals, soft_fingers=False, params=None):
+        """ Volume of grasp matrix singular values - score of all wrenches that the grasp can resist.
+        Parameters
+        ----------
+        forces : 3xN :obj:`numpy.ndarray`
+            set of forces on object in object basis
+        torques : 3xN :obj:`numpy.ndarray`
+            set of torques on object in object basis
+        normals : 3xN :obj:`numpy.ndarray`
+            surface normals at the contact points
+        soft_fingers : bool
+            whether or not to use the soft finger contact model
+        params : :obj:`GraspQualityConfig`
+            set of parameters for grasp matrix and contact model
+        Returns
+        -------
+        float : value of wrench volume
+        """
+        k = 1
+        if params is not None and 'k' in params.keys():
+            k = params.k
+
+        G = PointGraspMetrics3D.grasp_matrix(forces, torques, normals, soft_fingers)
+        _, S, _ = np.linalg.svd(G)
+        sig = S
+        return k * np.sqrt(np.prod(sig))
+
+    @staticmethod
+    def grasp_isotropy(forces, torques, normals, soft_fingers=False, params=None):
+        """ Condition number of grasp matrix - ratio of "weakest" wrench that the grasp can exert to the "strongest" one.
+        Parameters
+        ----------
+        forces : 3xN :obj:`numpy.ndarray`
+            set of forces on object in object basis
+        torques : 3xN :obj:`numpy.ndarray`
+            set of torques on object in object basis
+        normals : 3xN :obj:`numpy.ndarray`
+            surface normals at the contact points
+        soft_fingers : bool
+            whether or not to use the soft finger contact model
+        params : :obj:`GraspQualityConfig`
+            set of parameters for grasp matrix and contact model
+        Returns
+        -------
+        float : value of grasp isotropy metric
+        """
+        G = PointGraspMetrics3D.grasp_matrix(forces, torques, normals, soft_fingers)
+        _, S, _ = np.linalg.svd(G)
+        max_sig = S[0]
+        min_sig = S[5]
+        isotropy = min_sig / max_sig
+        if np.isnan(isotropy) or np.isinf(isotropy):
+            return 0
+        return isotropy
+
+    @staticmethod
     def ferrari_canny_L1(forces, torques, normals, soft_fingers=False, params=None,
                          wrench_norm_thresh=1e-3,
                          wrench_regularizer=1e-10):
@@ -301,6 +566,65 @@ class PointGraspMetrics3D:
         logging.debug('Min dist took %.3f sec for %d vertices' %(e - s, len(hull.vertices)))
 
         return min_dist
+
+    @staticmethod
+    def wrench_in_positive_span(wrench_basis, target_wrench, force_limit, num_fingers=1,
+                                wrench_norm_thresh = 1e-4, wrench_regularizer = 1e-10):
+        """ Check whether a target can be exerted by positive combinations of wrenches in a given basis with L1 norm fonger force limit limit.
+        Parameters
+        ----------
+        wrench_basis : 6xN :obj:`numpy.ndarray`
+            basis for the wrench space
+        target_wrench : 6x1 :obj:`numpy.ndarray`
+            target wrench to resist
+        force_limit : float
+            L1 upper bound on the forces per finger (aka contact point)
+        num_fingers : int
+            number of contacts, used to enforce L1 finger constraint
+        wrench_norm_thresh : float
+            threshold to use to determine equivalence of target wrenches
+        wrench_regularizer : float
+            small float to make quadratic program positive semidefinite
+        Returns
+        -------
+        int
+            whether or not wrench can be resisted
+        float
+            minimum norm of the finger forces required to resist the wrench
+        """
+        num_wrenches = wrench_basis.shape[1]
+
+        # quadratic and linear costs
+        P = wrench_basis.T.dot(wrench_basis) + wrench_regularizer*np.eye(num_wrenches)
+        q = -wrench_basis.T.dot(target_wrench)
+
+        # inequalities
+        lam_geq_zero = -1 * np.eye(num_wrenches)
+        
+        num_wrenches_per_finger = num_wrenches / num_fingers
+        force_constraint = np.zeros([num_fingers, num_wrenches])
+        for i in range(num_fingers):
+            start_i = num_wrenches_per_finger * i
+            end_i = num_wrenches_per_finger * (i + 1)
+            force_constraint[i, start_i:end_i] = np.ones(num_wrenches_per_finger)
+
+        G = np.r_[lam_geq_zero, force_constraint]
+        h = np.zeros(num_wrenches+num_fingers)
+        for i in range(num_fingers):
+            h[num_wrenches+i] = force_limit
+
+        # convert to cvx and solve
+        P = cvx.matrix(P)
+        q = cvx.matrix(q)
+        G = cvx.matrix(G)
+        h = cvx.matrix(h)
+        sol = cvx.solvers.qp(P, q, G, h)
+        v = np.array(sol['x'])
+
+        min_dist = np.linalg.norm(wrench_basis.dot(v).ravel() - target_wrench)**2
+
+        # add back in the target wrench
+        return min_dist < wrench_norm_thresh, np.linalg.norm(v)
 
     @staticmethod
     def min_norm_vector_in_facet(facet, wrench_regularizer=1e-10):

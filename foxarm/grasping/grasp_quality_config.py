@@ -48,3 +48,109 @@ class GraspQualityConfig(object):
         """ Raise an exception if the config is missing required keys """
         pass
 
+class QuasiStaticGraspQualityConfig(GraspQualityConfig):
+    """
+    Parameters for quasi-static grasp quality computation.
+    Attributes
+    ----------
+    config : :obj:`dict`
+        dictionary mapping parameter names to parameter values
+    Notes
+    -----
+    Required configuration key-value pairs in Other Parameters.
+    Other Parameters
+    ----------------
+    quality_method : :obj:`str`
+        string name of quasi-static quality metric
+    friction_coef : float
+        coefficient of friction at contact point
+    num_cone_faces : int
+        number of faces to use in friction cone approximation
+    soft_fingers : bool
+        whether to use a soft finger model
+    quality_type : :obj:`str`
+        string name of grasp quality type (e.g. quasi-static, robust quasi-static)
+    check_approach : bool
+        whether or not to check the approach direction
+    """
+    REQUIRED_KEYS = ['quality_method',
+                     'friction_coef',
+                     'num_cone_faces',
+                     'soft_fingers',
+                     'quality_type',
+                     'check_approach',
+                     'all_contacts_required']
+
+    def __init__(self, config):
+        GraspQualityConfig.__init__(self, config)
+
+    def __copy__(self):
+        """ Makes a copy of the config """
+        obj_copy = QuasiStaticGraspQualityConfig(self.__dict__)
+        return obj_copy
+
+    def check_valid(self, config):
+        for key in QuasiStaticGraspQualityConfig.REQUIRED_KEYS:
+            if key not in config.keys():
+                raise ValueError('Invalid configuration. Key %s must be specified' %(key))
+
+class RobustQuasiStaticGraspQualityConfig(GraspQualityConfig):
+    """
+    Parameters for quasi-static grasp quality computation.
+    Attributes
+    ----------
+    config : :obj:`dict`
+        dictionary mapping parameter names to parameter values
+    Notes
+    -----
+    Required configuration key-value pairs in Other Parameters.
+    Other Parameters
+    ----------------
+    quality_method : :obj:`str`
+        string name of quasi-static quality metric
+    friction_coef : float
+        coefficient of friction at contact point
+    num_cone_faces : int
+        number of faces to use in friction cone approximation
+    soft_fingers : bool
+        whether to use a soft finger model
+    quality_type : :obj:`str`
+        string name of grasp quality type (e.g. quasi-static, robust quasi-static)
+    check_approach : bool
+        whether or not to check the approach direction
+    num_quality_samples : int
+        number of samples to use
+    """
+    ROBUST_REQUIRED_KEYS = ['num_quality_samples']
+
+    def __init__(self, config):
+        GraspQualityConfig.__init__(self, config)
+
+    def __copy__(self):
+        """ Makes a copy of the config """
+        obj_copy = RobustQuasiStaticGraspQualityConfig(self.__dict__)
+        return obj_copy
+        
+    def check_valid(self, config):
+        required_keys = QuasiStaticGraspQualityConfig.REQUIRED_KEYS + \
+            RobustQuasiStaticGraspQualityConfig.ROBUST_REQUIRED_KEYS
+        for key in required_keys:
+            if key not in config.keys():
+                raise ValueError('Invalid configuration. Key %s must be specified' %(key))        
+
+class GraspQualityConfigFactory:
+    """ Helper class to automatically create grasp quality configurations of different types. """
+    @staticmethod
+    def create_config(config):
+        """ Automatically create a quality config from a dictionary.
+        Parameters
+        ----------
+        config : :obj:`dict`
+            dictionary mapping parameter names to parameter values
+        """
+        if config['quality_type'] == 'quasi_static':
+            return QuasiStaticGraspQualityConfig(config)
+        elif config['quality_type'] == 'robust_quasi_static':
+            return RobustQuasiStaticGraspQualityConfig(config)
+        else:
+            raise ValueError('Quality config type %s not supported' %(config['type']))
