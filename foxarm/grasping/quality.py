@@ -14,7 +14,7 @@ import sys
 import time
 
 '''
-	from dexnet.grasping import PointGrasp, GraspableObject3D, GraspQualityConfig
+    from dexnet.grasping import PointGrasp, GraspableObject3D, GraspQualityConfig
 '''
 from foxarm.grasping.grasp import PointGrasp
 from foxarm.grasping.graspable_object import GraspableObject3D
@@ -36,14 +36,14 @@ except:
 import IPython
 
 # turn off output logging
-cvx.solvers.options['show_progress'] = False
+# cvx.solvers.options['show_progress'] = False
 
 class PointGraspMetrics3D:
     """ Class to wrap functions for quasistatic point grasp quality metrics.
     """
 
-	@staticmethod
-	def grasp_quality(grasp, obj, params, vis=False):
+    @staticmethod
+    def grasp_quality(grasp, obj, params, vis=False):
         """
         Computes the quality of a two-finger point grasps on a given object using a quasi-static model.
         Parameters
@@ -55,8 +55,8 @@ class PointGraspMetrics3D:
         params : :obj:`GraspQualityConfig`
             parameters of grasp quality function
         """
-		start = time.time()
-		if not isinstance(grasp, PointGrasp):
+        start = time.time()
+        if not isinstance(grasp, PointGrasp):
             raise ValueError('Must provide a point grasp object')
         if not isinstance(obj, GraspableObject3D):
             raise ValueError('Must provide a 3D graspable object')
