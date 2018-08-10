@@ -21,7 +21,7 @@ class GraspQualityConfig(object):
     def __init__(self, config):
         self.check_valid(config)
 
-        for key, value in config.iteritems():
+        for key, value in config.items():
             setattr(self, key, value)
 
     def contains(self, key):

@@ -10,6 +10,7 @@ from foxarm.grasping.graspable_object import GraspableObject, GraspableObject3D
 from foxarm.constants import *
 from foxarm.grasping.contacts import Contact, Contact3D
 from foxarm.grasping.quality import PointGraspMetrics3D
+from foxarm.grasping.grasp_quality_config import GraspQualityConfigFactory
 from foxarm.common import constants
 from foxarm.common.keys import *
 from foxarm.common.sdf_file import SdfFile
@@ -31,4 +32,7 @@ print('### Generated %d unaligned grasps! ###' % len(unaligned_grasps))
 grasps = {}
 
 # calculate quality
-# PointGraspMetrics3D.grasp_quality(unaligned_grasps[0], obj)
+quality_config = GraspQualityConfigFactory.create_config(CONFIG['metrics']
+                                                               ['robust_ferrari_canny'])
+quality = PointGraspMetrics3D.grasp_quality(unaligned_grasps[0], obj, quality_config)
+print(quality)
