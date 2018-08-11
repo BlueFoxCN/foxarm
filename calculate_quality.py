@@ -23,6 +23,7 @@ sdf = SdfFile(sdf_path).read()
 CONFIG = YamlConfig(TEST_CONFIG_NAME)
 
 obj = GraspableObject3D(sdf, mesh)
+
 gripper = RobotGripper.load(GRIPPER_NAME, os.path.join(WORK_DIR, "foxarm/common"))
 ags = AntipodalGraspSampler(gripper, CONFIG)
 
@@ -36,3 +37,5 @@ quality_config = GraspQualityConfigFactory.create_config(CONFIG['metrics']
                                                                ['robust_ferrari_canny'])
 quality = PointGraspMetrics3D.grasp_quality(unaligned_grasps[0], obj, quality_config)
 print(quality)
+
+
