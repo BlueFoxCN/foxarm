@@ -5,3 +5,5 @@ mini_dexnet
 *.hdf5
 *.obj
 render
+*.png
+*.jpg

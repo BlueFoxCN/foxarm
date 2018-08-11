@@ -3,8 +3,9 @@ from .abstractstatic import abstractstatic
 from .camera_intrinsics import CameraIntrinsics
 from .sdf import Sdf3D
 from .sdf_file import SdfFile
+from .visualizer import Vis
 
-__all__ = ['abstractstatic', 'CameraIntrinsics', 'Sdf3D', 'SdfFile']
+__all__ = ['abstractstatic', 'CameraIntrinsics', 'Sdf3D', 'SdfFile', 'Vis']
 
 
 # module name spoofing for correct imports
