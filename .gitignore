@@ -7,3 +7,4 @@ mini_dexnet
 render
 *.png
 *.jpg
+*.so
