@@ -6,23 +6,33 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/freeglut.h>
-#define GLAPIENTRY
 
-// global rending constants
-float near = 0.05f;
-float far = 1e2f;
-float scale = (0x0001) << 0;
+extern "C"
 
-int main(float* projection,
-                 unsigned int im_height,
-                 unsigned int im_width,
-                 double* verts_buffer,
-                 unsigned int* tris_buffer,
-                 double* norms_buffer,
-                 unsigned int num_verts,
-                 unsigned int num_tris,
-                 unsigned int num_norms)
+float* render(double* projection,
+              int im_height,
+              int im_width,
+              double* verts_buffer,
+              int* tris_buffer,
+              double* norms_buffer,
+              int num_verts,
+              int num_tris,
+              int num_norms)
 {
+    printf("projection: %f %f %f\n", projection[0], projection[1], projection[2]);
+    printf("im_height: %d\n", im_height);
+    printf("im_width: %d\n", im_width);
+    printf("verts_buffer: %f %f %f\n", verts_buffer[0], verts_buffer[1], verts_buffer[2]);
+    printf("tris_buffer: %d %d %d\n", tris_buffer[0], tris_buffer[1], tris_buffer[2]);
+    printf("norms_buffer: %f %f %f\n", norms_buffer[0], norms_buffer[1], norms_buffer[2]);
+    printf("num_verts: %d\n", num_verts);
+    printf("num_tris: %d\n", num_tris);
+    printf("num_norms: %d\n", num_norms);
+
+    float near = 0.05f;
+    float far = 1e2f;
+    float scale = (0x0001) << 0;
+
     OSMesaContext ctx;
     void *buffer;
     unsigned char* color_result = NULL;
@@ -31,7 +41,7 @@ int main(float* projection,
     double final_matrix[16];
 
     // create an RGBA-mode context
-    ctx = OSMesaCreateContextExt( OSMESA_RGBA, 16, 0, 0, NULL );
+    ctx = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL );
     if (!ctx) {
         printf("OSMesaCreateContext failed!\n");
     }
@@ -114,6 +124,8 @@ int main(float* projection,
 
         glNormal3dv(&norms_buffer[3 * a]);
         glVertex3dv(&verts_buffer[3 * a]);
+
+
         glNormal3dv(&norms_buffer[3 * b]);
         glVertex3dv(&verts_buffer[3 * b]);
         glNormal3dv(&norms_buffer[3 * c]);
@@ -148,7 +160,5 @@ int main(float* projection,
 
     // destroy the context
     OSMesaDestroyContext( ctx );
-    return 1;
+    return depth_result;
 }
-
-
