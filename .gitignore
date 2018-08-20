@@ -1,4 +1,6 @@
 *__pycache__
+*.pkl
+.ipynb_checkpoints/
 *.zip
 mini_dexnet
 *.swp

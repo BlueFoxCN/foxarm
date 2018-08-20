@@ -17,7 +17,7 @@ import time
 
 import autolab_core.random_variables as rvs
 from foxarm.grasping.quality import PointGraspMetrics3D
-# from dexnet.learning import MaxIterTerminationCondition, GaussianUniformAllocationMean, RandomContinuousObjective
+from foxarm.learning import MaxIterTerminationCondition, GaussianUniformAllocationMean, RandomContinuousObjective
 
 import IPython
 
