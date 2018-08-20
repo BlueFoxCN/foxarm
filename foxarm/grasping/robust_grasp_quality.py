@@ -47,7 +47,7 @@ class QuasiStaticGraspQualityRV(rvs.RandomVariable):
 
     @property
     def obj(self):
-        return self.graspable_rv_.obj
+        return self.obj_rv_.obj
 
     @property
     def grasp(self):
@@ -115,10 +115,11 @@ class RobustPointGraspMetrics3D:
             variance of quality samples
         """
         # set up random variable
+
         q_rv = QuasiStaticGraspQualityRV(grasp_rv, graspable_rv,
                                          params_rv, quality_config)
         candidates = [q_rv]
-        
+
         # brute force with uniform allocation
         snapshot_rate = quality_config['sampling_snapshot_rate']
         num_samples = quality_config['num_quality_samples']
@@ -132,4 +133,3 @@ class RobustPointGraspMetrics3D:
         mn_q = final_model.means
         std_q = final_model.sample_vars
         return mn_q[0], std_q[0]
-        # return q_rv

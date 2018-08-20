@@ -61,11 +61,9 @@ for i, grasp in enumerate(grasps):
         if if_force_closure:
             fc_grasps.append(grasp)
 
-
 # calculate quality
 quality_config = GraspQualityConfigFactory.create_config(CONFIG['metrics']
                                                                ['robust_ferrari_canny'])
-
 T_obj_world = RigidTransform(from_frame='obj', to_frame='world')
 graspable_rv = GraspableObjectPoseGaussianRV(obj,
                                               T_obj_world,
@@ -81,7 +79,6 @@ for grasp in fc_grasps:
     # quality = PointGraspMetrics3D.grasp_quality(grasp, obj, quality_config)
     mean_q, std_q = RobustPointGraspMetrics3D.expected_quality(grasp_rv,
                                                                graspable_rv,
-                                                               # obj,
                                                                params_rv,
                                                                quality_config)
 

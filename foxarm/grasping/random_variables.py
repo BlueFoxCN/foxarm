@@ -117,6 +117,7 @@ class GraspableObjectPoseGaussianRV(RandomVariable):
             while len(samples) == prev_len:
                 try:
                     # sample random pose
+                    obj_copy = copy.deepcopy(self.obj_)
                     xi = self.r_xi_rv_.rvs(size=1)
                     S_xi = skew(xi)
                     R = self.R_sample_sigma_.dot(scipy.linalg.expm(S_xi).dot(self.R_sample_sigma_.T.dot(self.mean_T_obj_world_.rotation)))
@@ -130,7 +131,7 @@ class GraspableObjectPoseGaussianRV(RandomVariable):
                     z_tf = z_tf.data
                     
                     # transform object by pose
-                    obj_sample = self.obj_.transform(sample_tf)
+                    obj_sample = obj_copy.transform(sample_tf)
                     obj_sample.mesh.center_of_mass = z_tf
                     samples.append(obj_sample)
 
