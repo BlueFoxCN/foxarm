@@ -1,7 +1,10 @@
 import numpy as np
+import random
+import string
 import copy
 import time
 import logging
+from scipy import misc
 
 import ctypes
 from ctypes import *
@@ -91,7 +94,6 @@ class VirtualCamera(object):
         depth_ims = []
         render_start = time.time()
         for T_obj_camera in object_to_camera_poses:
-            print('AAA')
             # form projection matrix
             R = T_obj_camera.rotation
             t = T_obj_camera.translation
@@ -164,22 +166,21 @@ class VirtualCamera(object):
         # pre-multiply the stable pose
         world_to_camera_poses = [T_obj_camera.as_frames('obj', 'camera') for T_obj_camera in object_to_camera_poses]
         if stable_pose is not None:
+            '''
             t_obj_stp = np.array([0,0,-stable_pose.rotation.dot(stable_pose.translation)[2]])
             T_obj_stp = RigidTransform(rotation=stable_pose.rotation,
                                        translation=t_obj_stp,
                                        from_frame='obj',
                                        to_frame='stp')            
+            '''
+            T_obj_stp = stable_pose.copy()
+            T_obj_stp.frame_frame = 'obj'
+            T_obj_stp.to_frame = 'stp'
             stp_to_camera_poses = copy.copy(object_to_camera_poses)
             object_to_camera_poses = []
             for T_stp_camera in stp_to_camera_poses:
                 T_stp_camera.from_frame = 'stp'
                 object_to_camera_poses.append(T_stp_camera.dot(T_obj_stp))
-
-        # set lighting mode
-        enable_lighting = True
-        if render_mode == RenderMode.SEGMASK or render_mode == RenderMode.DEPTH or \
-           render_mode == RenderMode.DEPTH_SCENE:
-            enable_lighting = False
 
         depth_ims = self.images(mesh, object_to_camera_poses, debug=debug)
 
@@ -200,6 +201,14 @@ class VirtualCamera(object):
             for depth_im in depth_ims:
                 images.append(DepthImage(depth_im, frame=self._camera_intr.frame))
 
+            rnd_strs = []
+            for _ in images:
+                rnd_strs.append(''.join(random.choices(string.ascii_uppercase + string.digits, k=5)))
+
+            for img_idx, img in enumerate(images):
+                misc.imsave('depth_imgs/depth_%s.jpg' % rnd_strs[img_idx], img.data)
+                np.save('depth_imgs/depth_%s' % rnd_strs[img_idx], img.data)
+
             # render images of scene objects
             depth_scene_ims = {}
             for name, scene_obj in self._scene.items():
@@ -212,6 +221,10 @@ class VirtualCamera(object):
             for i in range(len(images)):
                 for j, name in enumerate(depth_scene_ims.keys()):
                     images[i] = images[i].combine_with(depth_scene_ims[name][j].image)
+
+            for img_idx, img in enumerate(images):
+                misc.imsave('depth_imgs/depth_%s_with_scene.jpg' % rnd_strs[img_idx], img.data)
+                np.save('depth_imgs/depth_%s_with_scene' % rnd_strs[img_idx], img.data)
 
         # create object renders
         if stable_pose is not None:

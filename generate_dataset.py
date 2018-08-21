@@ -1,4 +1,6 @@
 import copy
+import random
+import logging
 import pickle
 import numpy as np
 import os
@@ -27,7 +29,9 @@ gripper = RobotGripper.load(GRIPPER_NAME, os.path.join(WORK_DIR, "foxarm/common"
 # render_modes = [RenderMode.SEGMASK, RenderMode.DEPTH_SCENE]
 render_modes = [RenderMode.DEPTH_SCENE]
 
-def generate_dataset(config):
+SEED = 197561
+
+def generate_dataset(config, debug):
     obj_paths = ["mini_dexnet/bar_clamp.obj"]
 
     coll_check_params = config['collision_checking']
@@ -39,6 +43,7 @@ def generate_dataset(config):
 
     table_mesh_filename = coll_check_params['table_mesh_filename']
     table_mesh = trimesh.load_mesh(table_mesh_filename)
+
 
     T_table_obj = RigidTransform(from_frame='table', to_frame='obj')
     scene_objs = {'table': SceneObject(table_mesh, T_table_obj)}
@@ -116,23 +121,53 @@ def generate_dataset(config):
                                                               stable_pose=stp,
                                                               scene_objs=scene_objs)
             
+
             render_start = time.time()
+            if debug:
+                image_samples_per_stable_pose = 1
             render_samples = urv.rvs(size=image_samples_per_stable_pose)
             render_stop = time.time()
             logging.info('Rendering images took %.3f sec' %(render_stop - render_start))
+
+            if debug:
+                camera_path = "new_camera.obj"
+                camera_mesh = trimesh.load_mesh(camera_path)
+
+                camera_t = render_samples.camera.object_to_camera_pose
+                camera_mesh.apply_transform(camera_t.matrix)
+
+                Vis.plot_mesh(camera_mesh)
+
+                t_obj_stp = np.array([0,0,-stp.rotation.dot(stp.translation)[2]])
+                T_obj_stp = RigidTransform(rotation=stp.rotation,
+                                           translation=stp.translation,
+                                           from_frame='obj',
+                                           to_frame='stp')
+
+                obj.mesh.apply_transform(T_obj_stp.matrix)
+                mag = 2 * float(np.max(np.abs(obj.mesh.vertices)))
+                Vis.plot_mesh(obj.mesh)
+                Vis.plot_plane(mag)
+                Vis.plot_frame(mag)
+                mlab.show()
+
+            if debug:
+                break
 
 
 if __name__ == '__main__':
 
     dataset_config = YamlConfig(GENERATE_DATASET_CONFIG_NAME)
     debug = dataset_config['debug']
+    '''
     if debug:
         random.seed(SEED)
         np.random.seed(SEED)
+    '''
         
     # target_object_keys = config['target_objects']
     # env_rv_params = config['env_rv_params']
     # gripper_name = config['gripper']
 
     # generate the dataset
-    generate_dataset(dataset_config)
+    generate_dataset(dataset_config, debug)

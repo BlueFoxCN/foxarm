@@ -102,4 +102,4 @@ vis:
   candidate_grasps: 0
   rendered_images: 0
   grasp_images: 0
-debug: 0
+debug: 1

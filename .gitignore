@@ -1,4 +1,5 @@
 *__pycache__
+depth_imgs
 *.pkl
 .ipynb_checkpoints/
 *.zip
