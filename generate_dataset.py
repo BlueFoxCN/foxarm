@@ -1,4 +1,5 @@
 import copy
+from scipy import misc
 import random
 import logging
 import pickle
@@ -43,6 +44,15 @@ def generate_dataset(config, debug):
     delta_approach = coll_check_params['delta_approach']
     table_offset = coll_check_params['table_offset']
 
+    # read gqcnn params
+    gqcnn_params = config['gqcnn']
+    im_crop_height = gqcnn_params['crop_height']
+    im_crop_width = gqcnn_params['crop_width']
+    im_final_height = gqcnn_params['final_height']
+    im_final_width = gqcnn_params['final_width']
+    cx_crop = float(im_crop_width) / 2
+    cy_crop = float(im_crop_height) / 2
+
     image_samples_per_stable_pose = config['images_per_stable_pose']
 
     table_mesh_filename = coll_check_params['table_mesh_filename']
@@ -56,6 +66,8 @@ def generate_dataset(config, debug):
     env_rv_params = config['env_rv_params']
 
     max_grasp_approach_table_angle = np.deg2rad(table_alignment_params['max_approach_table_angle'])
+
+    img_idx = 0
 
     for obj_path in obj_paths:
 
@@ -127,39 +139,83 @@ def generate_dataset(config, debug):
             
 
             render_start = time.time()
-            if debug:
-                image_samples_per_stable_pose = 1
+            # image_samples_per_stable_pose = 100
             render_samples = urv.rvs(size=image_samples_per_stable_pose)
             render_stop = time.time()
-            logging.info('Rendering images took %.3f sec' %(render_stop - render_start))
+            logging.info('Rendering images took %.3f sec' % (render_stop - render_start))
+
+            if not isinstance(render_samples, (list,)):
+                render_samples = [render_samples]
 
             if debug:
-                camera_t = render_samples.camera.object_to_camera_pose
-                Vis.plot_camera(camera_filename, camera_t)
+                for render_sample in render_samples:
+                    mlab.clf()
+                    camera_t = render_sample.camera.object_to_camera_pose
+                    Vis.plot_camera(camera_filename, camera_t)
 
-                # camera_mesh = trimesh.load_mesh(camera_filename)
-                # camera_mesh.apply_transform(camera_t.matrix)
+                    t_obj_stp = np.array([0,0,-stp.rotation.dot(stp.translation)[2]])
+                    T_obj_stp = RigidTransform(rotation=stp.rotation,
+                                               translation=stp.translation,
+                                               from_frame='obj',
+                                               to_frame='stp')
 
-                # Vis.plot_mesh(camera_mesh)
+                    stable_mesh = obj.mesh.copy()
+                    stable_mesh.apply_transform(T_obj_stp.matrix)
 
-                t_obj_stp = np.array([0,0,-stp.rotation.dot(stp.translation)[2]])
-                T_obj_stp = RigidTransform(rotation=stp.rotation,
-                                           translation=stp.translation,
-                                           from_frame='obj',
-                                           to_frame='stp')
+                    # obj.mesh.apply_transform(T_obj_stp.matrix)
+                    mag = 2 * float(np.max(np.abs(stable_mesh.vertices)))
+                    Vis.plot_mesh(stable_mesh)
+                    Vis.plot_plane(4 * mag)
+                    Vis.plot_frame(mag)
 
-                obj.mesh.apply_transform(T_obj_stp.matrix)
-                mag = 2 * float(np.max(np.abs(obj.mesh.vertices)))
-                Vis.plot_mesh(obj.mesh)
-                Vis.plot_plane(mag)
-                Vis.plot_frame(mag)
+                    mlab.view(0, 0, 0.85)
 
-                mlab.view(0, 0, 0.85)
+                    # https://stackoverflow.com/questions/16543634/mayavi-mlab-savefig-gives-an-empty-image
+                    mlab.savefig('%s/%d.jpg' % (save_dir, img_idx))
+                    img_idx += 1
 
-                # https://stackoverflow.com/questions/16543634/mayavi-mlab-savefig-gives-an-empty-image
-                mlab.savefig('a.jpg')
+                    # mlab.show()
 
-                mlab.show()
+            for render_sample in render_samples:
+                depth_im_table = render_sample.renders[RenderMode.DEPTH_SCENE].image
+                T_stp_camera = render_sample.camera.object_to_camera_pose
+                shifted_camera_intr = render_sample.camera.camera_intr
+
+                # read pixel offsets
+                cx = depth_im_table.center[1]
+                cy = depth_im_table.center[0]
+
+                # compute intrinsics for virtual camera of the final
+                # cropped and rescaled images
+                camera_intr_scale = float(im_final_height) / float(im_crop_height)
+                cropped_camera_intr = shifted_camera_intr.crop(im_crop_height, im_crop_width, cy, cx)
+                final_camera_intr = cropped_camera_intr.resize(camera_intr_scale)
+
+                T_obj_camera = T_stp_camera * stp.as_frames('obj', T_stp_camera.from_frame)
+
+                for grasp in grasps[stp_idx]:
+
+                    # get the gripper pose
+                    grasp_2d = grasp.project_camera(T_obj_camera, shifted_camera_intr)
+
+
+                    # center images on the grasp, rotate to image x axis
+                    dx = cx - grasp_2d.center.x
+                    dy = cy - grasp_2d.center.y
+                    translation = np.array([dy, dx])
+
+                    depth_im_tf_table = depth_im_table.transform(translation, grasp_2d.angle)
+
+                    # crop to image size
+                    depth_im_tf_table = depth_im_tf_table.crop(im_crop_height, im_crop_width)
+
+                    # resize to image size
+                    depth_im_tf_table = depth_im_tf_table.resize((im_final_height, im_final_width))
+
+                    import pdb
+                    pdb.set_trace()
+
+                    misc.imsave('final.jpg', depth_im_tf_table.data)
 
 
             if debug:
@@ -170,11 +226,9 @@ if __name__ == '__main__':
 
     dataset_config = YamlConfig(GENERATE_DATASET_CONFIG_NAME)
     debug = dataset_config['debug']
-    '''
     if debug:
         random.seed(SEED)
         np.random.seed(SEED)
-    '''
         
     # target_object_keys = config['target_objects']
     # env_rv_params = config['env_rv_params']

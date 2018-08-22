@@ -10,14 +10,7 @@ import time
 from autolab_core import Point, RigidTransform
 from foxarm.common.sdf import Sdf3D
 from foxarm.grasping.graspable_object import GraspableObject3D
-
-'''
-try:
-    from gqcnn import Grasp2D
-except:
-    logging.warning('Failed to import gqcnn! Grasp2D functions will not be available.')
-'''
-
+from foxarm.gqcnn import Grasp2D
 
 from foxarm import abstractstatic
 from foxarm.grasping.contacts import Contact3D

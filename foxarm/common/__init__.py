@@ -11,10 +11,10 @@ from .image import Image, ColorImage, DepthImage, IrImage, GrayscaleImage, Binar
 from .object_render import ObjectRender
 
 __all__ = ['abstractstatic', 'CameraIntrinsics', 'VirtualCamera', 'SceneObject',
-		   'Sdf3D', 'SdfFile', 'Vis', 'UniformPlanarWorksurfaceImageRandomVariable',
-		   'Image', 'ColorImage', 'DepthImage', 'IrImage', 'GrayscaleImage',
-		   'BinaryImage', 'RgbdImage', 'GdImage', 'SegmentationImage',
-		   'PointCloudImage', 'NormalCloudImage', 'ObjectRender']
+           'Sdf3D', 'SdfFile', 'Vis', 'UniformPlanarWorksurfaceImageRandomVariable',
+           'Image', 'ColorImage', 'DepthImage', 'IrImage', 'GrayscaleImage',
+           'BinaryImage', 'RgbdImage', 'GdImage', 'SegmentationImage',
+           'PointCloudImage', 'NormalCloudImage', 'ObjectRender']
 
 
 # module name spoofing for correct imports

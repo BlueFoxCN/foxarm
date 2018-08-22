@@ -205,9 +205,9 @@ class VirtualCamera(object):
             for _ in images:
                 rnd_strs.append(''.join(random.choices(string.ascii_uppercase + string.digits, k=5)))
 
-            for img_idx, img in enumerate(images):
-                misc.imsave('depth_imgs/depth_%s.jpg' % rnd_strs[img_idx], img.data)
-                # np.save('depth_imgs/depth_%s' % rnd_strs[img_idx], img.data)
+            # for img_idx, img in enumerate(images):
+            #     misc.imsave('depth_imgs/depth_%s.jpg' % rnd_strs[img_idx], img.data)
+            #     np.save('depth_imgs/depth_%s' % rnd_strs[img_idx], img.data)
 
             # render images of scene objects
             depth_scene_ims = {}
