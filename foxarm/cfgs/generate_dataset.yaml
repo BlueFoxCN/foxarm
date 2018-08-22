@@ -102,4 +102,6 @@ vis:
   candidate_grasps: 0
   rendered_images: 0
   grasp_images: 0
+  camera_filename: camera.obj
+  save_dir: temp
 debug: 1

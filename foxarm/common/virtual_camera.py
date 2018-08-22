@@ -207,7 +207,7 @@ class VirtualCamera(object):
 
             for img_idx, img in enumerate(images):
                 misc.imsave('depth_imgs/depth_%s.jpg' % rnd_strs[img_idx], img.data)
-                np.save('depth_imgs/depth_%s' % rnd_strs[img_idx], img.data)
+                # np.save('depth_imgs/depth_%s' % rnd_strs[img_idx], img.data)
 
             # render images of scene objects
             depth_scene_ims = {}
@@ -224,7 +224,7 @@ class VirtualCamera(object):
 
             for img_idx, img in enumerate(images):
                 misc.imsave('depth_imgs/depth_%s_with_scene.jpg' % rnd_strs[img_idx], img.data)
-                np.save('depth_imgs/depth_%s_with_scene' % rnd_strs[img_idx], img.data)
+                # np.save('depth_imgs/depth_%s_with_scene' % rnd_strs[img_idx], img.data)
 
         # create object renders
         if stable_pose is not None:

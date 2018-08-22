@@ -34,6 +34,10 @@ SEED = 197561
 def generate_dataset(config, debug):
     obj_paths = ["mini_dexnet/bar_clamp.obj"]
 
+    vis_params = config["vis"]
+    camera_filename = vis_params["camera_filename"]
+    save_dir = vis_params["save_dir"]
+
     coll_check_params = config['collision_checking']
     approach_dist = coll_check_params['approach_dist']
     delta_approach = coll_check_params['delta_approach']
@@ -130,13 +134,13 @@ def generate_dataset(config, debug):
             logging.info('Rendering images took %.3f sec' %(render_stop - render_start))
 
             if debug:
-                camera_path = "new_camera.obj"
-                camera_mesh = trimesh.load_mesh(camera_path)
-
                 camera_t = render_samples.camera.object_to_camera_pose
-                camera_mesh.apply_transform(camera_t.matrix)
+                Vis.plot_camera(camera_filename, camera_t)
 
-                Vis.plot_mesh(camera_mesh)
+                # camera_mesh = trimesh.load_mesh(camera_filename)
+                # camera_mesh.apply_transform(camera_t.matrix)
+
+                # Vis.plot_mesh(camera_mesh)
 
                 t_obj_stp = np.array([0,0,-stp.rotation.dot(stp.translation)[2]])
                 T_obj_stp = RigidTransform(rotation=stp.rotation,
@@ -149,7 +153,14 @@ def generate_dataset(config, debug):
                 Vis.plot_mesh(obj.mesh)
                 Vis.plot_plane(mag)
                 Vis.plot_frame(mag)
+
+                mlab.view(0, 0, 0.85)
+
+                # https://stackoverflow.com/questions/16543634/mayavi-mlab-savefig-gives-an-empty-image
+                mlab.savefig('a.jpg')
+
                 mlab.show()
+
 
             if debug:
                 break
