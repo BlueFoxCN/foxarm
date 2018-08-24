@@ -53,12 +53,12 @@ metrics:
       sigma_grasp_rot_z: 0.001
       num_prealloc_samples: 0
     obj_uncertainty:
-      sigma_obj_trans_x: 0.01
-      sigma_obj_trans_y: 0.01
-      sigma_obj_trans_z: 0.01
-      sigma_obj_rot_x: 0.01
-      sigma_obj_rot_y: 0.01
-      sigma_obj_rot_z: 0.01
+      sigma_obj_trans_x: 1e-8
+      sigma_obj_trans_y: 1e-8
+      sigma_obj_trans_z: 1e-8
+      sigma_obj_rot_x: 1e-8
+      sigma_obj_rot_y: 1e-8
+      sigma_obj_rot_z: 1e-8
       sigma_obj_scale: 0.00
       num_prealloc_samples: 10
     params_uncertainty:
