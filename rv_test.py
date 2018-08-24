@@ -125,16 +125,6 @@ mag = 2 * float(np.max(np.abs(mesh.vertices)))
 quality_config = GraspQualityConfigFactory.create_config(CONFIG['metrics']
                                                                ['robust_ferrari_canny'])
 
-# qualities = []
-# for grasp in fc_grasps:
-#     quality = PointGraspMetrics3D.grasp_quality(grasp, obj, quality_config)
-#     qualities.append(quality)
-
-# visualize results
-
-# Vis.plot_plane(mag)
-# Vis.plot_frame(mag)
-
 import pdb
 max_q = 0.002
 min_q = 0.0005
