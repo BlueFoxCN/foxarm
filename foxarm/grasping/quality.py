@@ -203,7 +203,7 @@ class PointGraspMetrics3D:
         if soft_fingers:
             torsion = np.pi * finger_radius**2 * params.friction_coef * normals * params.torque_scaling
             pos_normal_i = -num_normals
-            neg_normal_i = -num_normals + num_normals / 2
+            neg_normal_i = -num_normals + num_normals // 2
             G[3:,pos_normal_i:neg_normal_i] = torsion
             G[3:,neg_normal_i:] = -torsion
 
