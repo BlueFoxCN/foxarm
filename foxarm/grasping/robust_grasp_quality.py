@@ -118,6 +118,17 @@ class RobustPointGraspMetrics3D:
 
         q_rv = QuasiStaticGraspQualityRV(grasp_rv, graspable_rv,
                                          params_rv, quality_config)
+
+        '''
+        num_samples = quality_config['num_quality_samples']
+        q_samples = []
+        for _ in range(num_samples):
+            q_samples.append(q_rv.rvs(size=1))
+
+        return q_samples
+        '''
+
+
         candidates = [q_rv]
 
         # brute force with uniform allocation

@@ -19,6 +19,7 @@ float* render(double* projection,
               int num_tris,
               int num_norms)
 {
+    /*
     printf("projection: %f %f %f\n", projection[0], projection[1], projection[2]);
     printf("im_height: %d\n", im_height);
     printf("im_width: %d\n", im_width);
@@ -28,6 +29,7 @@ float* render(double* projection,
     printf("num_verts: %d\n", num_verts);
     printf("num_tris: %d\n", num_tris);
     printf("num_norms: %d\n", num_norms);
+    */
 
     float near = 0.05f;
     float far = 1e2f;

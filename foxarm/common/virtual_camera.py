@@ -103,7 +103,7 @@ class VirtualCamera(object):
                                                   shape=(self._camera_intr.height * self._camera_intr.width,))
 
             projection = P.reshape(12)
-            print("projection: %f %f %f" % (projection[0], projection[1], projection[2]))
+            # print("projection: %f %f %f" % (projection[0], projection[1], projection[2]))
             projection = (ctypes.c_double * 12)(*projection)
 
             num_verts = mesh.vertices.shape[0]
@@ -111,15 +111,15 @@ class VirtualCamera(object):
             num_norms = mesh.vertex_normals.shape[0]
 
             verts_buffer = mesh.vertices.reshape(-1)
-            print("verts_buffer: %f %f %f" % (verts_buffer[0], verts_buffer[1], verts_buffer[2]))
+            # print("verts_buffer: %f %f %f" % (verts_buffer[0], verts_buffer[1], verts_buffer[2]))
             verts_buffer = (ctypes.c_double * (num_verts * 3))(*verts_buffer)
 
             tris_buffer = mesh.faces.reshape(-1)
-            print("verts_buffer: %d %d %d" % (tris_buffer[0], tris_buffer[1], tris_buffer[2]))
+            # print("verts_buffer: %d %d %d" % (tris_buffer[0], tris_buffer[1], tris_buffer[2]))
             tris_buffer = (ctypes.c_int * (num_tris * 3))(*tris_buffer)
 
             norm_buffer = mesh.vertex_normals.reshape(-1)
-            print("norm_buffer: %f %f %f" % (norm_buffer[0], norm_buffer[1], norm_buffer[2]))
+            # print("norm_buffer: %f %f %f" % (norm_buffer[0], norm_buffer[1], norm_buffer[2]))
             norm_buffer = (ctypes.c_double * (num_norms * 3))(*norm_buffer)
 
             ret = render_lib.render(projection,
