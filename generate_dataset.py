@@ -1,4 +1,8 @@
 import copy
+from time import sleep
+from threading import Thread
+from queue import Queue
+import h5py
 from scipy import misc
 import random
 import logging
@@ -29,14 +33,17 @@ from foxarm.common import *
 
 CONFIG = YamlConfig(TEST_CONFIG_NAME)
 gripper = RobotGripper.load(GRIPPER_NAME, os.path.join(WORK_DIR, "foxarm/common"))
-# render_modes = [RenderMode.SEGMASK, RenderMode.DEPTH_SCENE]
 render_modes = [RenderMode.DEPTH_SCENE]
 
 SEED = 197561
 
-def generate_dataset(config, debug):
+def generate_dataset(config, debug, result_queue):
     # read parameters
-    obj_paths = ["mini_dexnet/bar_clamp.obj"]
+    obj_ids = ["bar_clamp"]
+    obj_dir = "mini_dexnet"
+    obj_paths = ["%s/%s.obj" % ("mini_dexnet", e) for e in obj_ids]
+
+
     vis_params = config["vis"]
     camera_filename = vis_params["camera_filename"]
     save_dir = vis_params["save_dir"]
@@ -64,14 +71,18 @@ def generate_dataset(config, debug):
 
     img_idx = 0
 
-
     quality_config = GraspQualityConfigFactory.create_config(CONFIG['metrics']['robust_ferrari_canny'])
 
     # rv: friction core
     params_rv = ParamsGaussianRV(quality_config,
                                  quality_config.params_uncertainty)
 
-    for obj_path in obj_paths:
+    for obj_idx, obj_path in enumerate(obj_paths):
+
+        obj_id = obj_ids[obj_idx]
+        result = {}
+        result[obj_id] = {}
+
         # 1. construct the object
         sdf_path = obj_path[:-3] + "sdf"
         mesh = trimesh.load_mesh(obj_path)
@@ -83,6 +94,10 @@ def generate_dataset(config, debug):
         graspable_rv = GraspableObjectPoseGaussianRV(obj,
                                                      T_obj_world,
                                                      quality_config.obj_uncertainty)
+
+        result[obj_id]['mesh'] = {}
+        result[obj_id]['mesh']['vertices'] = mesh.vertices
+        result[obj_id]['mesh']['triangles'] = mesh.faces
 
         # 2. sample force closure grasps
         unaligned_fc_grasps = []
@@ -102,6 +117,7 @@ def generate_dataset(config, debug):
         for stp_mat in stp_mats:
             r, t = RigidTransform.rotation_and_translation_from_matrix(stp_mat)
             stps.append(RigidTransform(rotation=r, translation=t))
+        result[obj_id]['stable_poses'] = {}
 
         '''
         grasps_f = open('grasps.pkl', 'rb')
@@ -114,6 +130,8 @@ def generate_dataset(config, debug):
         # for each stable pose
         grasps = {}
         for stp_idx, stp in enumerate(stps):
+            result[obj_id]['stable_poses']['stp_0'] = {}
+            grasp_idx = 0
 
             # filter grasps and calculate quality
             grasps[stp_idx] = []
@@ -206,6 +224,7 @@ def generate_dataset(config, debug):
 
                     # get the gripper pose
                     grasp_2d = grasp.project_camera(T_obj_camera, shifted_camera_intr)
+                    grasp_depth = grasp_2d.depth
 
                     # center images on the grasp, rotate to image x axis
                     dx = cx - grasp_2d.center.x
@@ -217,12 +236,54 @@ def generate_dataset(config, debug):
                     depth_im_tf_table = depth_im_tf_table.crop(im_crop_height, im_crop_width)
                     depth_im_tf_table = depth_im_tf_table.resize((im_final_height, im_final_width))
 
-                    misc.imsave('generated_data/%f.jpg' % grasp_quality, depth_im_tf_table.data)
+                    # one sample consists of depth_im_tf_table, grasp_quality, and grasp_depth
+                    # misc.imsave('generated_data/%f.jpg' % grasp_quality, depth_im_tf_table.data)
 
+                    grasp_key = 'grasp_%d' % grasp_idx
+                    result[obj_id]['stable_poses']['stp_0'][grasp_key] = {}
+                    result[obj_id]['stable_poses']['stp_0'][grasp_key]['depth_img'] = depth_im_tf_table.data
+                    result[obj_id]['stable_poses']['stp_0'][grasp_key]['grasp_depth'] = grasp_depth
+                    result[obj_id]['stable_poses']['stp_0'][grasp_key]['quality'] = grasp_quality
+
+                    grasp_idx += 1
 
             if debug:
                 break
 
+        result_queue.put(result)
+
+class FileWriter:
+    def __init__(self, file_path):
+        self.result_queue = Queue(maxsize=100)
+        self.f = h5py.File(file_path, 'a')
+        self.dataset = self.f.create_group('dataset')
+
+    def write(self):
+        while True:
+            if self.result_queue.empty():
+                sleep(0.01)
+                continue
+            result = self.result_queue.get()
+            if isinstance(result, str) and result == "stop":
+                break
+
+            def construct(group, data):
+                for key in data.keys():
+                    if isinstance(data[key], dict):
+                        sub_group = group.create_group(key)
+                        construct(sub_group, data[key])
+                    elif isinstance(data[key], np.ndarray):
+                        group.create_dataset(key, data=data[key])
+                    else:
+                        group.create_dataset(key, data=np.array(data[key]))
+
+            construct(self.dataset, result)
+
+
+    def start(self):
+        self.t = Thread(target=self.write)
+        self.t.daemon = True
+        self.t.start()
 
 if __name__ == '__main__':
 
@@ -231,10 +292,18 @@ if __name__ == '__main__':
     if debug:
         random.seed(SEED)
         np.random.seed(SEED)
-        
-    # target_object_keys = config['target_objects']
-    # env_rv_params = config['env_rv_params']
-    # gripper_name = config['gripper']
+
+    writer = FileWriter(file_path='a.hdf5')
+    writer.start()
 
     # generate the dataset
-    generate_dataset(dataset_config, debug)
+    generate_dataset(dataset_config, debug, writer.result_queue)
+
+    '''
+    f = open('data.pkl', 'rb')
+    result = pickle.load(f)
+    writer.result_queue.put(result)
+    '''
+
+    writer.result_queue.put('stop')
+    writer.t.join()

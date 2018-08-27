@@ -19,14 +19,15 @@ target_objects:
 # Params for random variables controlling the environment (camera intr, camera and object poses)
 env_rv_params:
   # Camera intrinsics
-  min_f: 520
-  max_f: 530
-  min_cx: 299.5
-  max_cx: 299.5
-  min_cy: 299.5
-  max_cy: 299.5
-  im_width: 600
-  im_height: 600
+
+  min_f: 577.905029
+  max_f: 577.905029
+  min_cx: 312.920013
+  max_cx: 312.920013
+  min_cy: 260.558990
+  max_cy: 260.558990
+  im_width: 640
+  im_height: 480
 
   # Camera pose
   min_radius: 0.65
