@@ -203,7 +203,7 @@ class VirtualCamera(object):
 
             rnd_strs = []
             for _ in images:
-                rnd_strs.append(''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N)))
+                rnd_strs.append(''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5)))
 
             # for img_idx, img in enumerate(images):
             #     misc.imsave('depth_imgs/depth_%s.jpg' % rnd_strs[img_idx], img.data)
