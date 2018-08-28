@@ -656,7 +656,7 @@ class PointGraspMetrics3D:
         A = cvx.matrix(np.ones((1, dim)))  # sum constraint to enforce convex
         b = cvx.matrix(np.ones(1))         # combinations of vertices
 
-        sol = cvx.solvers.qp(P, q, G, h, A, b)
+        sol = cvx.solvers.qp(P, q, G, h, A, b, options={"show_progress": False})
         v = np.array(sol['x'])
         min_norm = np.sqrt(sol['primal objective'])
 

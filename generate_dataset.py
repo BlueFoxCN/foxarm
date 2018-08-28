@@ -37,13 +37,14 @@ render_modes = [RenderMode.DEPTH_SCENE]
 
 SEED = 197561
 
-def generate_dataset(config, debug, result_queue):
-    # read parameters
+def generate_dataset(obj_ids, obj_paths, config, debug, result_queue):
+    '''
     obj_ids = ["bar_clamp"]
     obj_dir = "mini_dexnet"
-    obj_paths = ["%s/%s.obj" % ("mini_dexnet", e) for e in obj_ids]
+    obj_paths = ["%s/%s.obj" % (obj_dir, e) for e in obj_ids]
+    '''
 
-
+    # read parameters
     vis_params = config["vis"]
     camera_filename = vis_params["camera_filename"]
     save_dir = vis_params["save_dir"]
@@ -118,14 +119,6 @@ def generate_dataset(config, debug, result_queue):
             r, t = RigidTransform.rotation_and_translation_from_matrix(stp_mat)
             stps.append(RigidTransform(rotation=r, translation=t))
         result[obj_id]['stable_poses'] = {}
-
-        '''
-        grasps_f = open('grasps.pkl', 'rb')
-        unaligned_grasps = pickle.load(grasps_f)
-
-        stps_f = open('stps.pkl', 'rb')
-        stps = pickle.load(stps_f)
-        '''
 
         # for each stable pose
         grasps = {}
@@ -296,14 +289,29 @@ if __name__ == '__main__':
     writer = FileWriter(file_path='a.hdf5')
     writer.start()
 
-    # generate the dataset
-    generate_dataset(dataset_config, debug, writer.result_queue)
+    '''
+    obj_dir = 'objs'
+    obj_sub_dirs = ['3dnet', 'kit']
+    obj_dir_paths = [os.path.join(obj_dir, e) for e in obj_sub_dirs]
 
+    obj_paths = []
+    obj_ids = []
+    for obj_dir_path in obj_dir_paths:
+        obj_files = os.listdir(obj_dir_path)
+        for obj_file in obj_files:
+            if not obj_file.endswith('.obj'):
+                continue
+            obj_paths.append(os.path.join(obj_dir_path, obj_file))
+            obj_ids.append(obj_file[:-4])
     '''
-    f = open('data.pkl', 'rb')
-    result = pickle.load(f)
-    writer.result_queue.put(result)
-    '''
+
+    obj_ids = ["bar_clamp"]
+    obj_dir = "mini_dexnet"
+    obj_paths = ["%s/%s.obj" % (obj_dir, e) for e in obj_ids]
+
+    # generate the dataset
+    generate_dataset(obj_ids, obj_paths, dataset_config, debug, writer.result_queue)
+
 
     writer.result_queue.put('stop')
     writer.t.join()
