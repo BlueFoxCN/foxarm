@@ -1,3 +1,4 @@
+import argparse
 import copy
 from time import sleep
 from threading import Thread
@@ -36,6 +37,14 @@ gripper = RobotGripper.load(GRIPPER_NAME, os.path.join(WORK_DIR, "foxarm/common"
 render_modes = [RenderMode.DEPTH_SCENE]
 
 SEED = 197561
+
+class Generator:
+    def __init__(self, obj_ids, obj_paths, config, debug, result_queue):
+        self.obj_ids = obj_ids
+        self.obj_paths = obj_paths
+        self.config = config
+        self.debug = debug
+        self.result_queue = result_queue
 
 def generate_dataset(obj_ids, obj_paths, config, debug, result_queue):
     '''
@@ -244,6 +253,7 @@ def generate_dataset(obj_ids, obj_paths, config, debug, result_queue):
                 break
 
         result_queue.put(result)
+        break
 
 class FileWriter:
     def __init__(self, file_path):
@@ -279,17 +289,22 @@ class FileWriter:
         self.t.start()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db_name', help='name of the database file')
+    parser.add_argument('--clear', action='store_true')
+    parser.add_argument('--seed', action='store_true')
+    parser.add_argument('--debug', action='store_true')
+    args = parser.parse_args()
+
 
     dataset_config = YamlConfig(GENERATE_DATASET_CONFIG_NAME)
-    debug = dataset_config['debug']
-    if debug:
+    if args.seed:
         random.seed(SEED)
         np.random.seed(SEED)
 
     writer = FileWriter(file_path='a.hdf5')
     writer.start()
 
-    '''
     obj_dir = 'objs'
     obj_sub_dirs = ['3dnet', 'kit']
     obj_dir_paths = [os.path.join(obj_dir, e) for e in obj_sub_dirs]
@@ -303,15 +318,15 @@ if __name__ == '__main__':
                 continue
             obj_paths.append(os.path.join(obj_dir_path, obj_file))
             obj_ids.append(obj_file[:-4])
-    '''
 
+    '''
     obj_ids = ["bar_clamp"]
     obj_dir = "mini_dexnet"
     obj_paths = ["%s/%s.obj" % (obj_dir, e) for e in obj_ids]
+    '''
 
     # generate the dataset
-    generate_dataset(obj_ids, obj_paths, dataset_config, debug, writer.result_queue)
-
+    generate_dataset(obj_ids, obj_paths, dataset_config, args.debug, writer.result_queue)
 
     writer.result_queue.put('stop')
     writer.t.join()
