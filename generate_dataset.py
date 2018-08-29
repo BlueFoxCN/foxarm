@@ -104,6 +104,8 @@ class Generator:
             result[obj_id]['mesh']['vertices'] = mesh.vertices
             result[obj_id]['mesh']['triangles'] = mesh.faces
 
+            print("Mesh %s has %d vertices and %d faces" % (obj_path, mesh.vertices.shape[0], mesh.faces.shape[0]))
+
             # 2. sample force closure grasps
             unaligned_fc_grasps = []
             ags = AntipodalGraspSampler(gripper, CONFIG)
@@ -116,6 +118,8 @@ class Generator:
                     if if_force_closure:
                         unaligned_fc_grasps.append(grasp)
 
+            print("Generate %d grasps" % len(unaligned_fc_grasps))
+
             # 3. compute stable poses
             stp_mats, stp_probs = mesh.compute_stable_poses(n_samples = 1)
             stps = []
@@ -123,6 +127,8 @@ class Generator:
                 r, t = RigidTransform.rotation_and_translation_from_matrix(stp_mat)
                 stps.append(RigidTransform(rotation=r, translation=t))
             result[obj_id]['stable_poses'] = {}
+
+            print("Compute %d stable poses" % len(stps))
 
             # for each stable pose
             grasps = {}
@@ -132,7 +138,7 @@ class Generator:
 
                 # filter grasps and calculate quality
                 grasps[stp_idx] = []
-                for grasp in unaligned_fc_grasps:
+                for grasp_idx, grasp in enumerate(unaligned_fc_grasps):
                     # align the grasp
                     aligned_grasp = grasp.perpendicular_table(stp)
 
@@ -147,6 +153,8 @@ class Generator:
                     if not success:
                         continue
 
+                    print("Calcuate quality for %d grasp" % grasp_idx)
+
                     # calculate grasp quality
                     grasp_rv = ParallelJawGraspPoseGaussianRV(aligned_grasp,
                                                               quality_config.grasp_uncertainty)
@@ -155,6 +163,8 @@ class Generator:
                                                                                params_rv,
                                                                                quality_config)
                     grasps[stp_idx].append((aligned_grasp, mean_q))
+
+                print("Quality calculated")
 
                 # render depth images
                 urv = UniformPlanarWorksurfaceImageRandomVariable(obj.mesh,
@@ -258,7 +268,10 @@ class Generator:
 class FileWriter:
     def __init__(self, file_path, obj_ids):
         self.result_queue = Queue(maxsize=100)
-        self.f = h5py.File(file_path, 'r+')
+        if os.path.isfile(file_path):
+            self.f = h5py.File(file_path, 'r+')
+        else:
+            self.f = h5py.File(file_path, 'w')
         if 'dataset' in self.f:
             existing_obj_ids = list(self.f['dataset'].keys())
             self.obj_ids = []
@@ -303,11 +316,11 @@ class FileWriter:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--db_name', help='name of the database file')
+    parser.add_argument('--db_name', help='name of the database file', default='data.hdf5')
     parser.add_argument('--clear', action='store_true')
     parser.add_argument('--seed', action='store_true')
     parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--gen_num', help='number of generator threads', default=1 type=int)
+    parser.add_argument('--gen_num', help='number of generator threads', default=1, type=int)
     args = parser.parse_args()
 
 
@@ -330,10 +343,10 @@ if __name__ == '__main__':
             obj_paths.append(os.path.join(obj_dir_path, obj_file))
             obj_ids.append(obj_file[:-4])
 
-    import pdb
-    pdb.set_trace()
+    obj_ids = obj_ids[:1]
+    obj_paths = obj_paths[:1]
 
-    writer = FileWriter(file_path=args.db_name, obj_ids)
+    writer = FileWriter(args.db_name, obj_ids)
     writer.start()
 
     generators = []
@@ -342,11 +355,15 @@ if __name__ == '__main__':
         generator = Generator(obj_ids, obj_paths, dataset_config, args.debug, writer.result_queue)
         generators.append(generator)
 
+    generators[0].generate_dataset()
+
+    '''
     for generator in generators:
         generator.start()
 
     for generator in generators:
         generator.t.join()
+    '''
 
     writer.result_queue.put('stop')
     writer.t.join()
