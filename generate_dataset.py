@@ -104,8 +104,6 @@ class Generator:
             result[obj_id]['mesh']['vertices'] = mesh.vertices
             result[obj_id]['mesh']['triangles'] = mesh.faces
 
-            print("Mesh %s has %d vertices and %d faces" % (obj_path, mesh.vertices.shape[0], mesh.faces.shape[0]))
-
             # 2. sample force closure grasps
             unaligned_fc_grasps = []
             ags = AntipodalGraspSampler(gripper, CONFIG)
@@ -118,17 +116,15 @@ class Generator:
                     if if_force_closure:
                         unaligned_fc_grasps.append(grasp)
 
-            print("Generate %d grasps" % len(unaligned_fc_grasps))
-
             # 3. compute stable poses
             stp_mats, stp_probs = mesh.compute_stable_poses(n_samples = 1)
+            stp_mats = stp_mats[:10]
+            stp_probs = stp_probs[:10]
             stps = []
             for stp_mat in stp_mats:
                 r, t = RigidTransform.rotation_and_translation_from_matrix(stp_mat)
                 stps.append(RigidTransform(rotation=r, translation=t))
             result[obj_id]['stable_poses'] = {}
-
-            print("Compute %d stable poses" % len(stps))
 
             # for each stable pose
             grasps = {}
@@ -153,8 +149,6 @@ class Generator:
                     if not success:
                         continue
 
-                    print("Calcuate quality for %d grasp" % grasp_idx)
-
                     # calculate grasp quality
                     grasp_rv = ParallelJawGraspPoseGaussianRV(aligned_grasp,
                                                               quality_config.grasp_uncertainty)
@@ -163,8 +157,6 @@ class Generator:
                                                                                params_rv,
                                                                                quality_config)
                     grasps[stp_idx].append((aligned_grasp, mean_q))
-
-                print("Quality calculated")
 
                 # render depth images
                 urv = UniformPlanarWorksurfaceImageRandomVariable(obj.mesh,
